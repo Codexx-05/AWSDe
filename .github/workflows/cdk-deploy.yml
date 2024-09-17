@@ -7,7 +7,7 @@ on:
 jobs:
   cdk_diff:
     runs-on: ubuntu-latest
-    if: github.event.issue.pull_request != '' && github.event.comment.body == 'deploy'
+    if: github.event.comment.body == 'deploy'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
