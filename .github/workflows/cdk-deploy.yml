@@ -32,12 +32,25 @@ jobs:
         run: npm install -g aws-cdk
 
       - name: Run `cdk diff`
-        run: cdk diff
+        run: |
+           cdk diff > diff.txt
+           cat diff.txt
+        
+      - name: Post diff comment
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const comment = `### CDK Diff Results
+            \`\`\`
+            ${require('fs').readFileSync('diff.txt', 'utf8')}
+            \`\`\`
 
       - name: Run `cdk deploy`
         run: cdk deploy --require-approval never      
 
       - name: Merge the PR if deployment succeeds
         run:
-            gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
-            gh pr merge ${{ github.event.issue.number }} --merge
+          git fetch origin master
+          git checkout master
+          git merge ${{ github.event.pull_request.head.ref }}
+          git push origin master
