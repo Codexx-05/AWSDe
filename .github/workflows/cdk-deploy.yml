@@ -43,7 +43,7 @@ jobs:
             const comment = `### CDK Diff Results
             \`\`\`
             ${require('fs').readFileSync('diff.txt', 'utf8')}
-            \`\`\`
+            \`\`\`;
 
       - name: Run `cdk deploy`
         run: cdk deploy --require-approval never      
