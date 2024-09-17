@@ -36,21 +36,6 @@ jobs:
            cdk diff > diff.txt
            cat diff.txt
         
-      - name: Post diff comment
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const comment = `### CDK Diff Results
-            \`\`\`
-            ${require('fs').readFileSync('diff.txt', 'utf8')}
-            \`\`\` Please approve the deployment by commenting \`approve\`.`;
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
-
       - name: Run `cdk deploy`
         run: cdk deploy --require-approval never      
 
