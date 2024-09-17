@@ -7,7 +7,7 @@ on:
 jobs:
   cdk_diff:
     runs-on: ubuntu-latest
-    if: github.event.comment.body == 'deploy'
+    if: startswith(github.event.comment.body,'deploy')
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
