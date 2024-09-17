@@ -1,8 +1,8 @@
 {
-  "name": "aws_de",
+  "name": "infra",
   "version": "0.1.0",
   "bin": {
-    "aws_de": "bin/aws_de.js"
+    "infra": "bin/infra.js"
   },
   "scripts": {
     "build": "tsc",
