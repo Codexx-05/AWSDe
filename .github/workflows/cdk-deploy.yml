@@ -1,8 +1,10 @@
 name: CDK Deploy
 
 on:
+  pull_request:
+    types: [opened, synchronize]
   issue_comment:
-    types: [created]
+    types: [created,edited]
 
 jobs:
   cdk-deploy:
