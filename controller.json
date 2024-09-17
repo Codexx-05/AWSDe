@@ -1,0 +1,10 @@
+{
+    "stacks": "B",
+
+    "Stack Option Comments" : 
+    "Configure 'stacks' variable with the following labels for deployment",
+    "stacks == B": "S3 Bucket stack",
+    "stacks == G": "Glue stack",
+    "stacks == L": "Lambda stack",
+    "stacks == P": "Parameter store stack"
+}
