@@ -22,7 +22,7 @@ const app = new cdk.App();
 // stacks == L: Lambda stack
 // stacks == p: Parameter stack
 
-// S3 stack
+// S3 Bucket stack
 if (controller.stacks == "B") {
 
   console.log("Building S3 bucket stack");
