@@ -46,9 +46,7 @@ jobs:
     
   cdk_deploy:
     needs: cdk_diff
-    runs-on: ubuntu-latest
-    environment:
-      name: 
+    runs-on: ubuntu-latest 
     permissions: 
       contents: write 
     steps:
@@ -93,12 +91,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge the PR if deployment succeeds
+      - name: Fetch and Merge Pull Request
         if: success()
         run: |
-          git fetch origin master   # Fetch the latest changes from master
-          git checkout master       # Switch to the master branch
-          git merge ${{ github.event.pull_request.head.ref }} --no-ff -m "Merge PR #${{ github.event.pull_request.number }} via GitHub Actions"  # Merge the PR branch
-          git push origin master    # Push the merged changes to the remote master branch
+          # Fetch all branches from the remote
+          git fetch origin
+
+          # Checkout to the master branch
+          git checkout master
+
+          # Ensure master branch is up-to-date
+          git pull origin master
+
+          # Merge the PR branch into master
+          git merge ${{ github.event.pull_request.head.ref }} --no-ff -m "Merge PR #${{ github.event.pull_request.number }} via GitHub Actions"
+
+          # Push the merged changes to the remote master branch
+          git push origin master
     
 
