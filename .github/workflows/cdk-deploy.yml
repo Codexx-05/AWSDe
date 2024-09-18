@@ -7,9 +7,14 @@ on:
 jobs:
   cdk_diff:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true
+          fetch-depth: 0
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
@@ -33,13 +38,68 @@ jobs:
         run: |
            cdk diff > diff.txt
            cat diff.txt
-        
+      - name: Upload CDK Diff as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+            name: cdk-diff
+            path: diff.txt
+    
+  cdk_deploy:
+    needs: cdk_diff
+    runs-on: ubuntu-latest
+    environment:
+      name: 
+    permissions: 
+      contents: write 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+          
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: 'us-east-1'
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+
+      - name: Download CDK Diff Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: cdk-diff
+          path: ./artifacts
+
+      - name: Display CDK Diff
+        run: cat ./artifacts/diff.txt  
+
       - name: Run `cdk deploy`
         run: cdk deploy --require-approval never      
 
+      - name: Configure Git for Automated Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Merge the PR if deployment succeeds
-        run:
-          git fetch origin master
-          git checkout master
-          git merge ${{ github.event.pull_request.head.ref }}
-          git push origin master
+        if: success()
+        uses: peter-evans/merge-pull-request@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request: ${{ github.event.pull_request.number }}
+          merge-method: merge  # Options: merge, squash, rebase
+          commit-title: "Merge PR #${{ github.event.pull_request.number }} via GitHub Actions"
+          commit-message: "Automatically merged PR #${{ github.event.pull_request.number }} after successful deployment."
+
