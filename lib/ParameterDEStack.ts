@@ -23,5 +23,13 @@ export class ParameterDEStack extends cdk.Stack {
         description: 'S3 Bucket ARN',
         tags: G.TaggingVars 
     });
+
+    new ssm.CfnParameter(this, 'IAMRolern',{
+        name: '/cdk/IAMRoleArn',
+        type: 'String',
+        value: param.IAMRoleArn,
+        description: 'IAM Role ARN',
+        tags: G.TaggingVars 
+    });
 }
 }
