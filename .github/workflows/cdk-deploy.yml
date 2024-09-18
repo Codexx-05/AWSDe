@@ -95,11 +95,10 @@ jobs:
 
       - name: Merge the PR if deployment succeeds
         if: success()
-        uses: peter-evans/merge-pull-request@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request: ${{ github.event.pull_request.number }}
-          merge-method: merge  # Options: merge, squash, rebase
-          commit-title: "Merge PR #${{ github.event.pull_request.number }} via GitHub Actions"
-          commit-message: "Automatically merged PR #${{ github.event.pull_request.number }} after successful deployment."
+        run: |
+          git fetch origin master   # Fetch the latest changes from master
+          git checkout master       # Switch to the master branch
+          git merge ${{ github.event.pull_request.head.ref }} --no-ff -m "Merge PR #${{ github.event.pull_request.number }} via GitHub Actions"  # Merge the PR branch
+          git push origin master    # Push the merged changes to the remote master branch
+    
 
