@@ -1,24 +1,38 @@
-name: CDK Deploy
+name: 'CDK Diff/Deploy'
 
 on:
-  pull_request:
-    types: [opened, synchronize]
   issue_comment:
-    types: [created,edited]
+    types: [created]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  repository-projects: read
+  deployments: write
+  packages: read
+  pages: read
+  statuses: write
+  security-events: write
+  actions: write
+  checks: read
+  id-token: write
+  pull-requests: write    # Corrected key
+  issues: write     
 
 jobs:
   cdk_diff:
+    name: CDK Build and Diff
+    if: >
+      github.event_name == 'issue_comment' &&
+      github.event.comment.body == '/cdk-diff' &&
+      github.event.issue.pull_request != null
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: 'us-east-1'
+          fetch-depth: 0
 
       - name: Setup Node.js environment
         uses: actions/setup-node@v3
@@ -31,17 +45,88 @@ jobs:
       - name: Install AWS CDK
         run: npm install -g aws-cdk
 
-      - name: Run `cdk diff`
+      - name: Run cdk diff
         run: |
-           cdk diff > diff.txt
-           cat diff.txt
-        
-      - name: Run `cdk deploy`
-        run: cdk deploy --require-approval never      
+          npx cdk diff > diff.txt
+          cat diff.txt
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: 'us-east-1'
 
-      - name: Merge the PR if deployment succeeds
-        run:
-          git fetch origin master
-          git checkout master
-          git merge ${{ github.event.pull_request.head.ref }}
-          git push origin master
+      - name: Upload CDK Diff as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: cdk-diff
+          path: diff.txt
+
+      - name: Post cdk diff result
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const diffOutput = fs.readFileSync('diff.txt', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: 
+                `\`\`\`
+                ${diffOutput}
+                \`\`\`
+                **Deployment diff has been executed. Awaiting approval to proceed with deployment.**`
+            });
+
+  approve_deployment:
+    name: Await Deployment Approval
+    needs: cdk_diff
+    runs-on: ubuntu-latest
+    environment:
+      name: production  # Ensure this environment exists with required reviewers
+      # The workflow will pause here until approved in the GitHub UI
+
+  cdk_deploy:
+    name: CDK Deploy
+    needs: approve_deployment
+    runs-on: ubuntu-latest 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: 'us-east-1'      
+
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
+
+      - name: Download CDK Diff Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: cdk-diff
+          path: ./artifacts
+
+      - name: Display CDK Diff
+        run: cat ./artifacts/diff.txt  
+
+      - name: Run `cdk deploy`
+        run: npx cdk deploy --require-approval never 
+        env: 
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: 'us-east-1'
+
+  
