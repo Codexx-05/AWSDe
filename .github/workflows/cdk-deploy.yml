@@ -18,7 +18,7 @@ permissions:
   checks: read
   id-token: write
   pull-requests: write    # Corrected key
-  issues: write 
+  issues: write     
 
 jobs:
   cdk_diff:
@@ -34,7 +34,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node.js environment
         uses: actions/setup-node@v3
         with:
           node-version: '22'
@@ -95,7 +95,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node.js environment
         uses: actions/setup-node@v3
         with:
           node-version: '20'
@@ -137,9 +137,9 @@ jobs:
       - name: Merge PR
         uses: peter-evans/merge-pull-request@v4
         with:
-          token: ${{ secrets.TOKEN }}  
-          pull-request: ${{ github.event.issue.pull_request.number }}
+          token: ${{ secrets.TOKEN }}  # Use default GITHUB_TOKEN
+          pull-request: ${{ github.event.pull_request.number }}
           merge-method: squash  # Options: merge, squash, rebase
-          commit-title: 'chore: merge PR #${{ github.event.issue.pull_request.number }}'
+          commit-title: 'chore: merge PR #${{ github.event.pull_request.number }}'
           commit-message: |
-            Merged PR #${{ github.event.issue.pull_request.number }} via GitHub Actions
+            Merged PR #${{ github.event.pull_request.number }} via GitHub Actions
