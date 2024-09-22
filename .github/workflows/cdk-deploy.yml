@@ -129,17 +129,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: 'us-east-1'
 
-  merge_pr:
-    name: Merge Pull Request
-    needs: cdk_deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Merge PR
-        uses: peter-evans/merge-pull-request@v4
-        with:
-          token: ${{ secrets.TOKEN }}  # Use default GITHUB_TOKEN
-          pull-request: ${{ github.event.pull_request.number }}
-          merge-method: squash  # Options: merge, squash, rebase
-          commit-title: 'chore: merge PR #${{ github.event.pull_request.number }}'
-          commit-message: |
-            Merged PR #${{ github.event.pull_request.number }} via GitHub Actions
+  
