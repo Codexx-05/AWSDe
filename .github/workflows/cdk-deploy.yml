@@ -54,17 +54,10 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Fetch All Branches
-        run: git fetch --all
-        
-      - name: Checkout Master Branch
-        run: git checkout master
+      - name: Merge `mythili` into Master (Prefer Mythili)
+        run: |
+          git fetch origin
+          git checkout master
+          git merge origin/mythili --no-edit --allow-unrelated-histories || git merge --strategy-option theirs origin/mythili --no-edit
       
-      - name: Merge `mythili` into Master (Allow Unrelated Histories)
-        run: git merge origin/mythili --no-edit --allow-unrelated-histories
-      
-      - name: Push Merged Changes to Master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: git push origin master
         
