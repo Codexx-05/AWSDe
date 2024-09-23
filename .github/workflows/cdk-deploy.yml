@@ -1,40 +1,47 @@
 name: CDK Deploy
 
 on:
+  pull_request:
+    types: [opened, synchronize]
   issue_comment:
-    types: [created]
+    types: [created,edited]
 
 jobs:
-  deploy:
-    if: >
-      github.event.issue.pull_request != null &&
-      contains(github.event.comment.body, '/cdk-deploy')
+  cdk_diff:
     runs-on: ubuntu-latest
-    environment:
-      name: production # Must match the environment you set up
-
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: 'us-east-1'
+
+      - name: Setup Node.js environment
         uses: actions/setup-node@v3
         with:
-          node-version: '18' # Adjust as needed
+          node-version: '22'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm install
 
-      - name: Deploy CDK
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: npx cdk deploy --require-approval never
+      - name: Install AWS CDK
+        run: npm install -g aws-cdk
 
-      - name: Merge Pull Request
-        uses: peter-evans/merge-pull-request@v4
-        with:
-          token: ${{ secrets.TOKEN }}
-          commit-message: "Merge via GitHub Actions"
-          merge-method: squash # Choose between merge, squash, or rebase
+      - name: Run `cdk diff`
+        run: |
+           cdk diff > diff.txt
+           cat diff.txt
+        
+      - name: Run `cdk deploy`
+        run: cdk deploy --require-approval never      
+
+      - name: Merge the PR if deployment succeeds
+        run:
+          git fetch origin master
+          git checkout master
+          git merge ${{ github.event.pull_request.head.ref }}
+          git push origin master
