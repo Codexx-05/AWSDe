@@ -39,9 +39,23 @@ jobs:
       - name: Run `cdk deploy`
         run: cdk deploy --require-approval never      
 
-      - name: Merge the PR if deployment succeeds
-        run:
-          git fetch origin master
-          git checkout master
+      - name: Checkout Master Branch
+        uses: actions/checkout@v3
+        with:
+          ref: master
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Merge the PR into Master
+        run: |
           git merge ${{ github.event.pull_request.head.ref }}
+      
+      - name: Push the Changes to Master
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+        run: |
           git push origin master
+      
