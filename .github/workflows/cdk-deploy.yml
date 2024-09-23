@@ -36,26 +36,32 @@ jobs:
            cdk diff > diff.txt
            cat diff.txt
         
-      - name: Run `cdk deploy`
-        run: cdk deploy --require-approval never      
+      - name: Check for Comment Trigger to Deploy
+        if: ${{ github.event.comment.body == '/cdk-deploy' }}
+        run: echo "Deploy command issued"
+   
+      - name: Run `cdk deploy` if Approved
+        if: ${{ github.event.comment.body == '/cdk-deploy' }}
+        run: cdk deploy --require-approval never
 
       - name: Checkout Master Branch
         uses: actions/checkout@v3
         with:
           ref: master
-      
-      - name: Configure Git
+
+      - name: Configure Git User
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      
-      - name: Merge the PR into Master
+
+      - name: Merge PR Branch into Master
         run: |
-          git merge ${{ github.event.pull_request.head.ref }}
-      
-      - name: Push the Changes to Master
+          git fetch origin
+          git checkout master
+          git merge ${{ github.event.pull_request.head.ref }} --no-edit
+
+      - name: Push Merged Changes to Master
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git push origin master
-      
