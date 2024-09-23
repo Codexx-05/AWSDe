@@ -1,0 +1,55 @@
+name: CDK Diff
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-cdk-diff:
+    if: >
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '/cdk-diff')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22' 
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run CDK Diff
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: npx cdk diff
+
+      - name: Comment Success
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: ${{ github.event.issue.number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "✅ CDK Diff completed successfully. You can now run `/cdk-deploy` to deploy."
+            })
+
+      - name: Comment Failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.issues.createComment({
+              issue_number: ${{ github.event.issue.number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "❌ CDK Diff failed. Please check the workflow logs for details."
+            })

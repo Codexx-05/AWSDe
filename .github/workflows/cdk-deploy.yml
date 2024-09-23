@@ -1,103 +1,41 @@
 name: CDK Deploy
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
 
 jobs:
-  cdk_diff:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          persist-credentials: true
-          fetch-depth: 0
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: 'us-east-1'
-
-      - name: Setup Node.js environment
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install AWS CDK
-        run: npm install -g aws-cdk
-
-      - name: Run `cdk diff`
-        run: |
-           cdk diff > diff.txt
-           cat diff.txt
-      - name: Upload CDK Diff as Artifact
-        uses: actions/upload-artifact@v3
-        with:
-            name: cdk-diff
-            path: diff.txt
-    
-  cdk_deploy:
-    needs: cdk_diff
+  deploy:
+    if: >
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '/cdk-deploy')
     runs-on: ubuntu-latest
     environment:
-      name: 
-    permissions: 
-      contents: write 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          persist-credentials: true
-          fetch-depth: 0
-          
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: 'us-east-1'
+      name: production # Must match the environment you set up
+      # The workflow will pause here until approved
 
-      - name: Setup Node.js environment
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '18' # Adjust as needed
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm install
 
-      - name: Install AWS CDK
-        run: npm install -g aws-cdk
+      - name: Deploy CDK
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: npx cdk deploy --require-approval never
 
-      - name: Download CDK Diff Artifact
-        uses: actions/download-artifact@v3
+      - name: Merge Pull Request
+        uses: peter-evans/merge-pull-request@v4
         with:
-          name: cdk-diff
-          path: ./artifacts
-
-      - name: Display CDK Diff
-        run: cat ./artifacts/diff.txt  
-
-      - name: Run `cdk deploy`
-        run: cdk deploy --require-approval never      
-
-      - name: Configure Git for Automated Commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Merge the PR if deployment succeeds
-        if: success()
-        run: |
-          git fetch origin master   # Fetch the latest changes from master
-          git checkout master       # Switch to the master branch
-          git merge ${{ github.event.pull_request.head.ref }} --no-ff -m "Merge PR #${{ github.event.pull_request.number }} via GitHub Actions"  # Merge the PR branch
-          git push origin master    # Push the merged changes to the remote master branch
-    
+          token: ${{ secrets.TOKEN }}
+          commit-message: "Merge via GitHub Actions"
+          merge-method: squash # Choose between merge, squash, or rebase
