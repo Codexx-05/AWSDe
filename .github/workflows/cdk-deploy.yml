@@ -2,9 +2,9 @@ name: CDK Diff Workflow
 
 on:
   pull_request:
-    types: [opened, synchronize] # Trigger when a new PR is created or updated
+    types: [opened, synchronize] # Triggers when a PR is created or updated
   issue_comment:
-    types: [created] # Trigger when a comment is added to a PR
+    types: [created] # Triggers when a new comment is added to an issue or PR
 
 jobs:
   cdk-diff:
@@ -18,11 +18,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Debug step to output context
+      - name: Print GitHub Context
+        run: echo "${{ toJson(github) }}"
+
       # Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20' # Use the node version compatible with CDK
+          node-version: '20'
 
       # Install dependencies
       - name: Install Dependencies
