@@ -1,63 +1,33 @@
-name: CDK Deploy
+name: CDK Diff Workflow
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize] # Trigger when a new PR is created or updated
   issue_comment:
-    types: [created,edited]
+    types: [created] # Trigger when a comment is added to a PR
 
 jobs:
-  cdk_diff:
+  cdk-diff:
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request != null && contains(github.event.comment.body, '/cdk-diff')
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      # Checkout the code
+      - name: Checkout Code
         uses: actions/checkout@v3
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: 'us-east-1'
+          fetch-depth: 0
 
-      - name: Setup Node.js environment
+      # Set up Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: '20' # Use the node version compatible with CDK
 
-      - name: Install dependencies
+      # Install dependencies
+      - name: Install Dependencies
         run: npm install
 
-      - name: Install AWS CDK
-        run: npm install -g aws-cdk
-
-      - name: Run `cdk diff`
-        run: |
-           cdk diff > diff.txt
-           cat diff.txt
-        
-      - name: Check for Comment Trigger to Deploy
-        if: ${{ github.event.comment.body == '/cdk-deploy' }}
-        run: echo "Deploy command issued"
-   
-      - name: Run `cdk deploy` if Approved
-        if: ${{ github.event.comment.body == '/cdk-deploy' }}
-        run: cdk deploy --require-approval never
-
-      - name: Checkout Master Branch
-        uses: actions/checkout@v3
-        with:
-          ref: master
-
-      - name: Configure Git User
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Merge `mythili` into Master (Prefer Mythili)
-        run: |
-          git fetch origin
-          git checkout master
-          git merge origin/mythili --no-edit --allow-unrelated-histories || git merge --strategy-option theirs origin/mythili --no-edit
-      
-        
+      # CDK Diff
+      - name: Perform CDK Diff
+        run: npx cdk diff
